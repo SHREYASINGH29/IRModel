@@ -6,6 +6,8 @@
 #include <iostream>
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
 
 using namespace llvm;
 
@@ -23,12 +25,24 @@ class IRModelPass : public FunctionPass {
 	void handleLoad(LoadInst *LI){
 		std::cout<<LI->getName().str()<<" = *"<<LI->getPointerOperand()->getName().str()<<std::endl;
 	}
+	void handleStore(StoreInst *SI){
+		std::cout << "*" << SI->getPointerOperand()->getName().str() << " = ";
+		Value * ValueOp = SI->getValueOperand();
+		if(auto *CI = dyn_cast<ConstantInt>(ValueOp)){
+			std::cout << CI->getValue().toString(10, true);
+		} else {
+			std::cout << ValueOp->getName().str();
+		}
+		std::cout << std::endl;
+	}
 	bool runOnFunction(Function &F) override {
 		for(inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I){
 			if(auto *AI = dyn_cast<AllocaInst>(&*I)){
 				handleAlloca(AI);
 			}else if(auto *LI = dyn_cast<LoadInst>(&*I)){
 				handleLoad(LI);
+			}else if(auto *SI = dyn_cast<StoreInst>(&*I)){
+				handleStore(SI);
 			}
 		}
 		return false;

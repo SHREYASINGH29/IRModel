@@ -9,6 +9,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 
+
 using namespace llvm;
 
 namespace {
@@ -19,6 +20,13 @@ class IRModelPass : public FunctionPass {
        public:
 	static char ID;
 	IRModelPass() : FunctionPass(ID) {}
+	std::string getConst(Value *Val){
+		if(auto *CI = dyn_cast<ConstantInt>(Val)){
+			return CI->getValue().toString(10, true);
+		}else{
+			return Val->getName().str();
+		}
+	}
 	void handleAlloca(AllocaInst *AI){
 		std::cout<<AI->getName().str()<< " = new memloc"<<std::endl;
 	}
@@ -45,6 +53,21 @@ class IRModelPass : public FunctionPass {
 			std::cout<<"return "<<RetVal->getName().str()<<std::endl;
 		}
 	}
+	void handleBinaryOps(Instruction *BI){
+		Value *BO1 = BI->getOperand(0);
+		Value *BO2 = BI->getOperand(1);
+		char Op;
+		if(BI->getOpcode()== Instruction::Add){
+			Op = '+';
+		}else if(BI->getOpcode()== Instruction::Mul){
+			Op = '*';
+		}else if(BI->getOpcode()== Instruction::Sub){
+			Op = '-';
+		}else if(BI->getOpcode()==Instruction::UDiv){
+			Op = '/';
+		}
+		std::cout<<BI->getName().str()<<" = "<<getConst(BO1)<<" "<<Op<<" "<<getConst(BO2)<<std::endl;
+	}
 	bool runOnFunction(Function &F) override {
 		for(inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I){
 			if(auto *AI = dyn_cast<AllocaInst>(&*I)){
@@ -55,6 +78,8 @@ class IRModelPass : public FunctionPass {
 				handleStore(SI);
 			}else if(auto *RI = dyn_cast<ReturnInst>(&*I)){
 				handleReturn(RI);
+			}else if((*I).isBinaryOp()){
+				handleBinaryOps(&*I);
 			}
 		}
 		return false;

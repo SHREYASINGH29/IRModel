@@ -17,14 +17,19 @@ class IRModelPass : public FunctionPass {
        public:
 	static char ID;
 	IRModelPass() : FunctionPass(ID) {}
-	void handleAlloca(Instruction &I){
-		if(auto *AI = dyn_cast<AllocaInst>(&I)){
-			std::cout<<AI->getName().str()<< " = new memloc"<<std::endl;
-		}
+	void handleAlloca(AllocaInst *AI){
+		std::cout<<AI->getName().str()<< " = new memloc"<<std::endl;
+	}
+	void handleLoad(LoadInst *LI){
+		std::cout<<LI->getName().str()<<" = *"<<LI->getPointerOperand()->getName().str()<<std::endl;
 	}
 	bool runOnFunction(Function &F) override {
 		for(inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I){
-			handleAlloca(*I);
+			if(auto *AI = dyn_cast<AllocaInst>(&*I)){
+				handleAlloca(AI);
+			}else if(auto *LI = dyn_cast<LoadInst>(&*I)){
+				handleLoad(LI);
+			}
 		}
 		return false;
 	}

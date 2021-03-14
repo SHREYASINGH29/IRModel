@@ -35,6 +35,16 @@ class IRModelPass : public FunctionPass {
 		}
 		std::cout << std::endl;
 	}
+	void handleReturn(ReturnInst *RI){
+		Value *RetVal = RI->getReturnValue();
+		if(!RetVal){
+			std::cout<<"return void"<<std::endl;
+		}else if(auto *RC = dyn_cast<ConstantInt>(RetVal)){
+			std::cout<<"return "<<RC->getValue().toString(10,true)<<std::endl;
+		}else{
+			std::cout<<"return "<<RetVal->getName().str()<<std::endl;
+		}
+	}
 	bool runOnFunction(Function &F) override {
 		for(inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I){
 			if(auto *AI = dyn_cast<AllocaInst>(&*I)){
@@ -43,6 +53,8 @@ class IRModelPass : public FunctionPass {
 				handleLoad(LI);
 			}else if(auto *SI = dyn_cast<StoreInst>(&*I)){
 				handleStore(SI);
+			}else if(auto *RI = dyn_cast<ReturnInst>(&*I)){
+				handleReturn(RI);
 			}
 		}
 		return false;

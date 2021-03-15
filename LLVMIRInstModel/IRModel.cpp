@@ -68,8 +68,45 @@ class IRModelPass : public FunctionPass {
 		}
 		std::cout<<BI->getName().str()<<" = "<<getConst(BO1)<<" "<<Op<<" "<<getConst(BO2)<<std::endl;
 	}
+	void handleBitCast(BitCastInst *BCI){
+		std::string Ref = BCI->getName().str();
+		Value *Dest = BCI->getOperand(0);
+		std::cout<<Ref<<" = "<<getConst(Dest)<<std::endl;
+	}
+	void handleSextCast(SExtInst *SEI){
+		std::string Def = SEI->getName().str();
+		Value *Dest = SEI->getOperand(0);
+		std::cout<<Def<<" = "<<getConst(Dest)<<std::endl;
+	}
+	void handleCall(CallInst *CI){
+		if(!(CI->doesNotReturn())){
+			std::cout<<CI->getName().str()<<" = ";
+		}
+		Function *CF = CI->getCalledFunction();
+		if(CF!=nullptr){
+			std::cout<<CF->getName().str();
+		}
+		std::cout<<"( ";
+		unsigned Num = CI->getNumArgOperands();
+		for(int i = 0; i < Num;i++){
+			std::cout<<getConst(CI->getArgOperand(i))<<" ";
+		}
+		std::cout<<" )"<<std::endl;
+	}
+	void handlePointer(GetElementPtrInst *GP){
+		std::cout << GP->getName().str() << " = &";
+		std::cout << GP->getPointerOperand()->getName().str();
+		std::string StrIdx = "[";
+		for(Value* Idx: GP->indices()){
+			StrIdx += (getConst(Idx) + "][");
+		}
+		StrIdx += "]";
+		StrIdx = StrIdx.substr(0, StrIdx.size() - 2);
+		std::cout << StrIdx << "\n";
+	}
 	bool runOnFunction(Function &F) override {
 		for(inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I){
+			errs()<<*I<<"\n";
 			if(auto *AI = dyn_cast<AllocaInst>(&*I)){
 				handleAlloca(AI);
 			}else if(auto *LI = dyn_cast<LoadInst>(&*I)){
@@ -80,6 +117,14 @@ class IRModelPass : public FunctionPass {
 				handleReturn(RI);
 			}else if((*I).isBinaryOp()){
 				handleBinaryOps(&*I);
+			}else if(auto *BCI = dyn_cast<BitCastInst>(&*I)){
+				handleBitCast(BCI);
+			}else if(auto *SEI = dyn_cast<SExtInst>(&*I)){
+				handleSextCast(SEI);
+			}else if(auto *CI = dyn_cast<CallInst>(&*I)){
+				handleCall(CI);
+			}else if(auto *GP = dyn_cast<GetElementPtrInst>(&*I)){
+				handlePointer(GP);
 			}
 		}
 		return false;
